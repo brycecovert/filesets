@@ -7,3 +7,7 @@ edition = "2018"
 [dependencies]
 clap = "2.33.0"
 tokio-fs ="0.1.6"
+futures = "0.1.26"
+rust-crypto = "^0.2"
+
+
