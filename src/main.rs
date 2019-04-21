@@ -1,6 +1,6 @@
 extern crate clap;
 use clap::{Arg, App, SubCommand};
-use std::fs::{read_dir};
+use tokio_fs::{read_dir};
 use std::path::Path;
 
 
