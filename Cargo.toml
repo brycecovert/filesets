@@ -11,4 +11,7 @@ futures = "0.1.26"
 rust-crypto = "^0.2"
 threadpool = "1.7.1"
 
+[profile.release]
+lto = true
+panic = 'abort'
 
