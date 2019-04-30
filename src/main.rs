@@ -59,6 +59,12 @@ fn main() {
         .version("1.0")
         .author("Bryce Covert")
         .about("compares two directory trees, telling you which files are in one but not in the other")
+        .arg(Arg::with_name("print-duplicates")
+             .long("print-duplicates")
+             .help("Prints duplicates"))
+        .arg(Arg::with_name("print-unique")
+             .long("print-unique")
+             .help("Prints unique entries"))
         .arg(Arg::with_name("directory")
              .short("d")
              .long("directory")
@@ -86,10 +92,17 @@ fn main() {
         for directoryMap in hashMaps.iter() {
             for alreadySeen in directoryMap.keys() {
                 if (seen.contains(alreadySeen)) {
-                    for seenInstance in directoryMap.get(alreadySeen).unwrap() {
-                        println!("{} -> {}", seenInstance, locations.get(alreadySeen).unwrap());
+                    if (matches.is_present("print-duplicates")) {
+                        for seenInstance in directoryMap.get(alreadySeen).unwrap() {
+                            println!("{} -> {}", seenInstance, locations.get(alreadySeen).unwrap());
+                        }
                     }
                 } else {
+                    if (matches.is_present("print-unique")) {
+                        for seenInstance in directoryMap.get(alreadySeen).unwrap() {
+                            println!("{} is unique", seenInstance);
+                        }
+                    }
                     seen.insert(&alreadySeen);
                     locations.insert(&alreadySeen, directoryMap.get(alreadySeen).unwrap().first().unwrap());
                 }
