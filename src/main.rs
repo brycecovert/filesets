@@ -81,17 +81,17 @@ fn main() {
         })
             .collect();
 
-        let mut seen = hashMaps.first().unwrap().keys().map(|x| x.clone()).collect::<HashSet<String>>();
-        let mut locations = hashMaps.first().unwrap().iter().map(|(k, v)| (k.clone(), v.first().unwrap().clone())).collect::<HashMap<String,String>>();
-        for directoryMap in hashMaps {
+        let mut seen = hashMaps.first().unwrap().keys().collect::<HashSet<&String>>();
+        let mut locations = hashMaps.first().unwrap().iter().map(|(k, v)| (k, v.first().unwrap())).collect::<HashMap<&String,&String>>();
+        for directoryMap in hashMaps.iter() {
             for alreadySeen in directoryMap.keys() {
                 if (seen.contains(alreadySeen)) {
                     for seenInstance in directoryMap.get(alreadySeen).unwrap() {
                         println!("{} -> {}", seenInstance, locations.get(alreadySeen).unwrap());
                     }
                 } else {
-                    seen.insert(alreadySeen.clone());
-                    locations.insert(alreadySeen.clone(), directoryMap.get(alreadySeen).unwrap().first().unwrap().clone());
+                    seen.insert(&alreadySeen);
+                    locations.insert(&alreadySeen, directoryMap.get(alreadySeen).unwrap().first().unwrap());
                 }
             }
         }
