@@ -78,6 +78,7 @@ fn main() {
 
     if let Some(directories)  = matches.values_of("directory") {
         let directories = directories.into_iter().map(|x| x.to_string()).collect::<Vec<String>>();
+        let directories2 = directories.into_iter().collect::<Vec<String>>();
         let directory_hashes: HashMap<String, HashMap<String, Vec<String>>> = directories.iter().map(|d| {
             let cnt = walk(&Path::new(&d), &pool, tx.clone()).unwrap();
             let h = reduce_hash_map(&rx, usize::from(cnt));
@@ -137,6 +138,5 @@ fn main() {
                 seen.insert(file);
             }
         }
-        /* } */
     }
 }
