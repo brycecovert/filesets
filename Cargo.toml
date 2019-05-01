@@ -10,8 +10,10 @@ tokio-fs ="0.1.6"
 futures = "0.1.26"
 rust-crypto = "^0.2"
 threadpool = "1.7.1"
+pbr = "1.0.1"
 
 [profile.release]
 lto = true
 panic = 'abort'
+
 
