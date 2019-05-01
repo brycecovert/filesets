@@ -14,26 +14,38 @@ use pbr::ProgressBar;
 use std::io::Write;
 
 enum Hashed {
-    Res (String, String)
+    Res (String, String),
+        Err
 }
 
 fn walk(path: &Path, pool: &ThreadPool, tx:  Sender<Hashed>) -> Result<u64, std::io::Error> {
     let mut cnt = 0;
     for entry in read_dir(&path)? {
-        let p = entry.unwrap().path();
-        if p.is_file() {
-            cnt += 1;
-            let c = tx.clone();
-            pool.execute(move || {
-                let filename = p;
-                let bytes = read(&filename).unwrap();
-                let mut m = Md5::new();
-                m.input(&bytes);
-                let r = m.result_str();
-                c.send(Hashed::Res(r, filename.to_str().unwrap().to_string())).unwrap();
-            });
-        } else if p.is_dir() {
-            cnt += walk(&p, pool, tx.clone()).unwrap();
+        if let Ok(p) = entry {
+            let p = p.path();
+            if p.is_file() {
+                cnt += 1;
+                let c = tx.clone();
+                pool.execute(move || {
+                    let filename = p;
+                    if let Ok(bytes) = read(&filename) {
+                        let mut m = Md5::new();
+                        m.input(&bytes);
+                        let r = m.result_str();
+                        if let Some(path2) = filename.to_str() {
+                            c.send(Hashed::Res(r, path2.to_string())).unwrap();
+                        } else {
+                            c.send(Hashed::Err);
+                        }
+                    } else {
+                        c.send(Hashed::Err);
+                    }
+                });
+            } else if p.is_dir() {
+                if let Ok(more) = walk(&p, pool, tx.clone()) {
+                    cnt += more;
+                }
+            }
         }
     }
 
@@ -48,6 +60,10 @@ fn reduce_hash_map<T: Write >(rx: &Receiver<Hashed>, cnt: u64, pb: &mut Progress
                 let e = a.entry(x);
                 e.or_insert(vec!()).push(y);
                 a
+            },
+            Hashed::Err => {
+                pb.inc();
+                    a
             }
         }
     })
@@ -107,7 +123,8 @@ fn main() {
         let directory_hashes: HashMap<&str, HashMap<String, Vec<String>>> = directories.iter().map(|d| {
             let cnt = walk(&Path::new(&d), &pool, tx.clone()).unwrap();
             let mut pb = ProgressBar::new(u64::from(cnt));
-            pb.format("[=>_]");
+            pb.show_speed =false;
+            pb.format("[=> ]");
             let h = reduce_hash_map(&rx, cnt, &mut pb);
             pb.finish();
             (*d, h)
@@ -145,7 +162,6 @@ fn main() {
             }
 
             if matches.is_present("firsts") {
-                println!("{:?}", v);
                 let f = v.first().unwrap();
                 println!("({}) {}", h, f);
             }
@@ -159,7 +175,7 @@ fn main() {
             if matches.is_present("plan") && v.len() > 1 {
                 let f = v.first().unwrap();
                 for duplicate in v.iter().skip(1) {
-                    println!("({:3}) {} -> {}", h, duplicate, f);
+                    println!("({}) {} -> {}", h, duplicate, f);
                 }
             }
         }
