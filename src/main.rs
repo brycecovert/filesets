@@ -73,6 +73,47 @@ fn reduce_hash_map<T: Write >(rx: &Receiver<Hashed>, cnt: u64, pb: &mut Option<P
     })
 }
 
+fn build_fileset(directories: &Vec<&str>, quiet: bool) -> HashMap<String, Vec<String>> {
+    let pool = ThreadPool::new(12);
+    let (tx, rx) = channel();
+
+    let directory_hashes: HashMap<&str, HashMap<String, Vec<String>>> = directories.iter().map(|d| {
+        let cnt = walk(&Path::new(&d), &pool, tx.clone()).unwrap();
+        let mut pb = match quiet
+        {
+            false => Some(ProgressBar::new(u64::from(cnt))).and_then(|mut pb| {
+                pb.show_speed =false;
+                pb.format("[=> ]");
+                Some(pb)
+            }),
+            true => None
+        };
+        let h = reduce_hash_map(&rx, cnt, &mut pb);
+        if let Some( pb2) = &mut pb {
+            pb2.finish();
+        }
+        (*d, h)
+    }
+    )
+        .collect();
+
+    let mut seen = HashSet::<String>::new();
+    directories.iter().map(|d| directory_hashes.get(d).unwrap() ).fold(HashMap::new(), |mut big, current| {
+        for (k, mut v) in current {
+            let entry = big.entry(k.to_string()).or_insert(vec!());
+            for file in v {
+                let canonical = Path::new(file).canonicalize().unwrap().as_os_str().to_str().unwrap().to_owned();
+
+                if !seen.contains(&canonical) {
+                    entry.push(file.clone());
+                }
+                seen.insert(canonical);
+            }
+        }
+        big
+    })
+}
+
 fn main() {
     let matches = App::new("filesets")
         .version("1.0")
@@ -117,51 +158,11 @@ fn main() {
              .required(true)
              .takes_value(true))
         .get_matches();
-    let pool = ThreadPool::new(12);
-    let (tx, rx) = channel();
-
 
     if let Some(directories)  = matches.values_of("directory") {
         let directories = directories.into_iter().collect::<Vec<&str>>();
 
-        let directory_hashes: HashMap<&str, HashMap<String, Vec<String>>> = directories.iter().map(|d| {
-            let cnt = walk(&Path::new(&d), &pool, tx.clone()).unwrap();
-            let mut pb = match matches.is_present("quiet")
-            {
-                false => Some(ProgressBar::new(u64::from(cnt))).and_then(|mut pb| {
-                    pb.show_speed =false;
-                    pb.format("[=> ]");
-                    Some(pb)
-                }),
-                true => None
-            };
-            let h = reduce_hash_map(&rx, cnt, &mut pb);
-            if let Some( pb2) = &mut pb {
-                pb2.finish();   
-            }
-            (*d, h)
-        }
-        )
-            .collect();
-
-        let mut seen = HashSet::<String>::new();
-        let big_hash = directories.iter().map(|d| directory_hashes.get(d).unwrap() ).fold(HashMap::new(), |mut big, current| {
-            for (k, mut v) in current {
-                let entry = big.entry(k).or_insert(vec!());
-                for file in v {
-                    let canonical = Path::new(file).canonicalize().unwrap().as_os_str().to_str().unwrap().to_owned();
-
-                    if !seen.contains(&canonical) {
-                        entry.push(file.clone());
-                    }
-                    seen.insert(canonical);
-                }
-
-            }
-            big
-        });
-
-        for (h, v) in big_hash.iter() {
+        for (h, v) in build_fileset(&directories, matches.is_present("quiet")).iter() {
             let h = &h.to_string()[0..8];
             if matches.is_present("uniques") && v.len() == 1 {
                 println!("({}) {}", h, v.first().unwrap());
@@ -191,5 +192,36 @@ fn main() {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::build_fileset;
+    use std::collections::HashMap;
+
+    #[test]
+    fn it_should_find_individual_files() {
+        let expected: HashMap<String, Vec<String>> = vec!(
+            ("8d4dd6ee05b14bed218bdd8e4e89f648".to_string(),
+             vec!("examples/1/unique-1".to_string())),
+            ("0bc0878606ed744ae45696e6faad0c03".to_string(),
+             vec!("examples/1/duplicated2".to_string())))
+            .into_iter().collect();
+        assert_eq!(build_fileset(&vec!["examples/1"], true), expected);
+    }
+
+    #[test]
+    fn it_should_find_duplicate_files() {
+        assert_eq!(build_fileset(&vec!["examples/1", "examples/3"], true)
+                   .get("0bc0878606ed744ae45696e6faad0c03").unwrap(),
+                   &vec!("examples/1/duplicated2".to_string(), "examples/3/duplicated2".to_string()));
+    }
+
+    #[test]
+    fn it_should_dedup_same_relative_file() {
+        assert_eq!(build_fileset(&vec!["examples/1", "examples/../examples/1"], true)
+                   .get("0bc0878606ed744ae45696e6faad0c03").unwrap(),
+                   &vec!("examples/1/duplicated2".to_string()));
     }
 }
