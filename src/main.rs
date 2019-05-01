@@ -8,14 +8,13 @@ use std::path::Path;
 use crypto::md5::Md5;
 use crypto::digest::Digest;
 use std::collections::{HashMap, HashSet};
-use std::sync::mpsc::{channel, Sender, Receiver};
+use std::sync::mpsc::{channel, Sender};
 use threadpool::ThreadPool;
 use pbr::ProgressBar;
-use std::io::Write;
 
 enum Hashed {
     Res (String, String),
-        Err
+    Err
 }
 
 fn walk(path: &Path, pool: &ThreadPool, tx:  Sender<Hashed>) -> Result<u64, std::io::Error> {
@@ -35,10 +34,10 @@ fn walk(path: &Path, pool: &ThreadPool, tx:  Sender<Hashed>) -> Result<u64, std:
                         if let Some(path2) = filename.to_str() {
                             c.send(Hashed::Res(r, path2.to_string())).unwrap();
                         } else {
-                            c.send(Hashed::Err);
+                            c.send(Hashed::Err).unwrap();
                         }
                     } else {
-                        c.send(Hashed::Err);
+                        c.send(Hashed::Err).unwrap();
                     }
                 });
             } else if p.is_dir() {
@@ -52,22 +51,16 @@ fn walk(path: &Path, pool: &ThreadPool, tx:  Sender<Hashed>) -> Result<u64, std:
     return Ok(cnt);
 }
 
-fn reduce_hash_map<T: Write >(rx: &Receiver<Hashed>, cnt: u64, pb: &mut Option<ProgressBar<T>>) -> HashMap<String, Vec<String>> {
-    rx.iter().take(cnt as usize).fold(HashMap::new(), |mut a, z| {
+fn reduce_hash_map<'a >(rx: &'a mut Iterator<Item = Hashed>, cnt: u64) -> HashMap<String, Vec<String>> {
+    rx.take(cnt as usize).fold(HashMap::new(), |mut a, z| {
         match z {
             Hashed::Res(x, y) => {
-                if let Some(pb2) = pb {
-                    pb2.inc();
-                };
                 let e = a.entry(x);
                 e.or_insert(vec!()).push(y);
                 a
             },
             Hashed::Err => {
-                if let Some(pb) = pb {
-                    pb.inc();
-                }
-                    a
+                a
             }
         }
     })
@@ -77,31 +70,27 @@ fn build_fileset(directories: &Vec<&str>, quiet: bool) -> HashMap<String, Vec<St
     let pool = ThreadPool::new(12);
     let (tx, rx) = channel();
 
-    let directory_hashes: HashMap<&str, HashMap<String, Vec<String>>> = directories.iter().map(|d| {
+    let mut seen = HashSet::<String>::new();
+    directories.iter().map(|d| {
         let cnt = walk(&Path::new(&d), &pool, tx.clone()).unwrap();
-        let mut pb = match quiet
-        {
-            false => Some(ProgressBar::new(u64::from(cnt))).and_then(|mut pb| {
+        match quiet {
+            false => { 
+                let mut pb = ProgressBar::new(u64::from(cnt));
                 pb.show_speed =false;
                 pb.format("[=> ]");
-                Some(pb)
-            }),
-            true => None
-        };
-        let h = reduce_hash_map(&rx, cnt, &mut pb);
-        if let Some( pb2) = &mut pb {
-            pb2.finish();
+                let h = reduce_hash_map(&mut rx.iter().map(|x| { pb.inc(); x }), cnt);
+                pb.finish();
+                h
+            },
+            true => {
+                reduce_hash_map(&mut rx.iter(), cnt)
+            }
         }
-        (*d, h)
-    }
-    )
-        .collect();
-
-    let mut seen = HashSet::<String>::new();
-    directories.iter().map(|d| directory_hashes.get(d).unwrap() ).fold(HashMap::new(), |mut big, current| {
-        for (k, mut v) in current {
+    })
+    .fold(HashMap::new(), |mut big, current| {
+        for (k, v) in current {
             let entry = big.entry(k.to_string()).or_insert(vec!());
-            for file in v {
+            for file in &v {
                 let canonical = Path::new(file).canonicalize().unwrap().as_os_str().to_str().unwrap().to_owned();
 
                 if !seen.contains(&canonical) {
