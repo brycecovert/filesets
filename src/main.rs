@@ -22,12 +22,12 @@ fn walk(path: &Path, pool: &ThreadPool, tx:  Sender<Hashed>) -> Result<usize, st
             cnt += 1;
             let c = tx.clone();
             pool.execute(move || {
-                let filename = p.canonicalize().unwrap();
-                let bytes = read(&p).unwrap();
+                let filename = p;
+                let bytes = read(&filename).unwrap();
                 let mut m = Md5::new();
                 m.input(&bytes);
                 let r = m.result_str();
-                c.send(Hashed::Res(r, filename.as_path().to_str().unwrap().to_string())).unwrap();
+                c.send(Hashed::Res(r, filename.to_str().unwrap().to_string())).unwrap();
             });
         } else if p.is_dir() {
             cnt += walk(&p, pool, tx.clone()).unwrap();
@@ -103,9 +103,19 @@ fn main() {
         )
             .collect();
 
+        let mut seen = HashSet::<String>::new();
         let big_hash = directories.iter().map(|d| directory_hashes.get(d).unwrap() ).fold(HashMap::new(), |mut big, current| {
             for (k, mut v) in current {
-                big.entry(k).or_insert(vec!()).extend(v);
+                let entry = big.entry(k).or_insert(vec!());
+                for file in v {
+                    let canonical = Path::new(file).canonicalize().unwrap().as_os_str().to_str().unwrap().to_owned();
+
+                    if !seen.contains(&canonical) {
+                        entry.push(file.clone());
+                    }
+                    seen.insert(canonical);
+                }
+
             }
             big
         });
@@ -123,6 +133,7 @@ fn main() {
             }
 
             if matches.is_present("firsts") {
+                println!("{:?}", v);
                 let f = v.first().unwrap();
                 println!("({}) {}", h, f);
             }
