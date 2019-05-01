@@ -3,13 +3,14 @@ extern crate crypto;
 extern crate threadpool;
 extern crate pbr;
 use clap::{Arg, App, ArgGroup};
-use std::fs::{read_dir, read};
+use std::fs::{read};
 use std::path::Path;
 use crypto::md5::Md5;
 use crypto::digest::Digest;
 use std::collections::{HashMap, HashSet};
 use std::sync::mpsc::{channel, Sender};
 use threadpool::ThreadPool;
+use walkdir::WalkDir;
 use pbr::ProgressBar;
 
 enum Hashed {
@@ -19,19 +20,22 @@ enum Hashed {
 
 fn walk(path: &Path, pool: &ThreadPool, tx:  Sender<Hashed>) -> Result<u64, std::io::Error> {
     let mut cnt = 0;
-    for entry in read_dir(&path)? {
-        if let Ok(p) = entry {
-            let p = p.path();
-            if p.is_file() {
+    for entry in WalkDir::new(&path)
+        .follow_links(false)
+        .into_iter()
+        .map(|x| x.unwrap()){
+            if !entry.metadata().unwrap().is_dir()  {
                 cnt += 1;
+                if cnt % 10000 == 0 {
+                    println!("cnt, {}", cnt);
+                }
                 let c = tx.clone();
                 pool.execute(move || {
-                    let filename = p;
-                    if let Ok(bytes) = read(&filename) {
+                    if let Ok(bytes) = read(&entry.path()) {
                         let mut m = Md5::new();
                         m.input(&bytes);
                         let r = m.result_str();
-                        if let Some(path2) = filename.to_str() {
+                        if let Some(path2) = entry.path().to_str() {
                             c.send(Hashed::Res(r, path2.to_string())).unwrap();
                         } else {
                             c.send(Hashed::Err).unwrap();
@@ -40,14 +44,8 @@ fn walk(path: &Path, pool: &ThreadPool, tx:  Sender<Hashed>) -> Result<u64, std:
                         c.send(Hashed::Err).unwrap();
                     }
                 });
-            } else if p.is_dir() {
-                if let Ok(more) = walk(&p, pool, tx.clone()) {
-                    cnt += more;
-                }
             }
         }
-    }
-
     return Ok(cnt);
 }
 
@@ -68,10 +66,10 @@ fn reduce_hash_map<'a >(rx: &'a mut Iterator<Item = Hashed>, cnt: u64) -> HashMa
 
 fn build_fileset(directories: &Vec<&str>, quiet: bool) -> HashMap<String, Vec<String>> {
     let pool = ThreadPool::new(12);
-    let (tx, rx) = channel();
 
     let mut seen = HashSet::<String>::new();
     directories.iter().map(|d| {
+        let (tx, rx) = channel();
         let cnt = walk(&Path::new(&d), &pool, tx.clone()).unwrap();
         match quiet {
             false => { 
