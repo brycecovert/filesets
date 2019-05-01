@@ -52,17 +52,21 @@ fn walk(path: &Path, pool: &ThreadPool, tx:  Sender<Hashed>) -> Result<u64, std:
     return Ok(cnt);
 }
 
-fn reduce_hash_map<T: Write >(rx: &Receiver<Hashed>, cnt: u64, pb: &mut ProgressBar<T>) -> HashMap<String, Vec<String>> {
+fn reduce_hash_map<T: Write >(rx: &Receiver<Hashed>, cnt: u64, pb: &mut Option<ProgressBar<T>>) -> HashMap<String, Vec<String>> {
     rx.iter().take(cnt as usize).fold(HashMap::new(), |mut a, z| {
         match z {
             Hashed::Res(x, y) => {
-                pb.inc();
+                if let Some(pb2) = pb {
+                    pb2.inc();
+                };
                 let e = a.entry(x);
                 e.or_insert(vec!()).push(y);
                 a
             },
             Hashed::Err => {
-                pb.inc();
+                if let Some(pb) = pb {
+                    pb.inc();
+                }
                     a
             }
         }
@@ -122,11 +126,19 @@ fn main() {
 
         let directory_hashes: HashMap<&str, HashMap<String, Vec<String>>> = directories.iter().map(|d| {
             let cnt = walk(&Path::new(&d), &pool, tx.clone()).unwrap();
-            let mut pb = ProgressBar::new(u64::from(cnt));
-            pb.show_speed =false;
-            pb.format("[=> ]");
+            let mut pb = match matches.is_present("quiet")
+            {
+                false => Some(ProgressBar::new(u64::from(cnt))).and_then(|mut pb| {
+                    pb.show_speed =false;
+                    pb.format("[=> ]");
+                    Some(pb)
+                }),
+                true => None
+            };
             let h = reduce_hash_map(&rx, cnt, &mut pb);
-            pb.finish();
+            if let Some( pb2) = &mut pb {
+                pb2.finish();   
+            }
             (*d, h)
         }
         )
