@@ -23,12 +23,12 @@ fn walk(path: &Path, pool: &ThreadPool, tx:  Sender<Hashed>) -> Result<usize, st
             cnt += 1;
             let c = tx.clone();
             pool.execute(move || {
-                let filename = p.to_str().unwrap();
+                let filename = p.canonicalize().unwrap();
                 let bytes = read(&p).unwrap();
                 let mut m = Md5::new();
                 m.input(&bytes);
                 let r = m.result_str();
-                c.send(Hashed::Res(r, filename.to_string())).unwrap();
+                c.send(Hashed::Res(r, filename.as_path().to_str().unwrap().to_string())).unwrap();
             });
         } else if p.is_dir() {
             cnt += walk(&p, pool, tx.clone()).unwrap();
@@ -80,61 +80,49 @@ fn main() {
 
         let directory_hashes: HashMap<&str, HashMap<String, Vec<String>>> = directories.iter().map(|d| {
             let cnt = walk(&Path::new(&d), &pool, tx.clone()).unwrap();
+            println!("reading {} files from {}", cnt, d);
             let h = reduce_hash_map(&rx, usize::from(cnt));
-            println!("{} has {} files", d, cnt);
             (*d, h)
         }
         )
             .collect();
-        let mut locations = HashMap::<&str, &str>::new(); 
-        let mut seen = HashSet::<&str>::new(); 
-        for directory in directories.iter() {
-            let others: HashSet<_> = directories.iter().filter(|d| *d != directory)
-                .flat_map(|d| directory_hashes.get(*d).unwrap().keys())
-                .map(|d| d.as_str())
-                .collect();
 
-            let mine_map = directory_hashes.get(directory).unwrap();
-            let mine: HashSet<&str> = mine_map.keys().map(|x| x.as_str()).collect();
+        let big_hash = directories.iter().map(|d| directory_hashes.get(d).unwrap() ).fold(HashMap::new(), |mut big, current| {
+            for (k, mut v) in current {
+                big.entry(k).or_insert(vec!()).extend(v);
+            }
+            big
+        });
 
-            if prints.contains("uniques") {
-                for result in mine.difference(&others).flat_map(|h| mine_map.get(h.clone()).unwrap()) {
-                    println!("{} is unique", result);
+        for (h, v) in big_hash.iter() {
+            let h = &h.to_string()[0..8];
+            if prints.contains("uniques") && v.len() == 1 {
+                println!("({}) {} is unique", h, v.first().unwrap());
+            }
+
+            if prints.contains("duplicates") && v.len() > 1 {
+                for duplicate in v {
+                    println!("({}) {} is duplicated", h, duplicate);
                 }
             }
 
-            if prints.contains("duplicates") {
-                for result in mine.intersection(&others) {
-                    for duplicate in mine_map.get(*result).unwrap() {
-                        if let Some(l) = locations.get(*result) {
-                            println!("{} -> {}", duplicate, l);
-                        }
-                    }
+            if prints.contains("first") {
+                let f = v.first().unwrap();
+                println!("({}) {} is first", h, f);
+            }
+
+            if prints.contains("replicas") && v.len() > 1 {
+                let f = v.first().unwrap();
+                for duplicate in v.iter().skip(1) {
+                    println!("({:3}) {} replicates {}", h, duplicate, f);
                 }
             }
 
-            if prints.contains("rolling-duplicates") {
-                for result in mine.intersection(&seen) {
-                    for duplicate in mine_map.get(*result).unwrap() {
-                        if let Some(l) = locations.get(*result) {
-                            println!("{} -> {}", duplicate, l);
-                        }
-                    }
+            if prints.contains("plan") && v.len() > 1 {
+                let f = v.first().unwrap();
+                for duplicate in v.iter().skip(1) {
+                    println!("({:3}) {} -> {}", h, duplicate, f);
                 }
-            }
-
-            if prints.contains("rolling-uniques") {
-                for result in mine.difference(&seen) {
-                    for unique in mine_map.get(*result).unwrap() {
-                        println!("{} is rolling-unique", unique);
-                    }
-                }
-            }
-
-            for file in mine.iter() {
-                let filename = mine_map.get(file.clone()).unwrap().get(0).unwrap();
-                locations.entry(file).or_insert(filename);
-                seen.insert(file);
             }
         }
     }
