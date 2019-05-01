@@ -118,7 +118,7 @@ fn main() {
     let matches = App::new("filesets")
         .version("1.0")
         .author("Bryce Covert")
-        .about("compares two directory trees, telling you which files are in one but not in the other")
+        .about("Your swiss-army knife for dealing with identical files.")
 
         .group(ArgGroup::with_name("mode")
                .required(true))
@@ -165,30 +165,45 @@ fn main() {
         for (h, v) in build_fileset(&directories, matches.is_present("quiet")).iter() {
             let h = &h.to_string()[0..8];
             if matches.is_present("uniques") && v.len() == 1 {
-                println!("({}) {}", h, v.first().unwrap());
+                if !matches.is_present("quiet") {
+                    print!("({}) ", h);
+                }
+                println!("{}", v.first().unwrap());
             }
 
             if matches.is_present("duplicates") && v.len() > 1 {
                 for duplicate in v {
-                    println!("({}) {}", h, duplicate);
+                    if !matches.is_present("quiet") {
+                        print!("({}) ", h);
+                    }
+                    println!("{}", duplicate);
                 }
             }
 
             if matches.is_present("firsts") {
+                if !matches.is_present("quiet") {
+                    print!("({}) ", h);
+                }
                 let f = v.first().unwrap();
-                println!("({}) {}", h, f);
+                println!("{}", f);
             }
 
             if matches.is_present("replicas") && v.len() > 1 {
                 for duplicate in v.iter().skip(1) {
-                    println!("({}) {}", h, duplicate);
+                    if !matches.is_present("quiet") {
+                        print!("({}) ", h);
+                    }
+                    println!("{}", duplicate);
                 }
             }
 
             if matches.is_present("plan") && v.len() > 1 {
                 let f = v.first().unwrap();
                 for duplicate in v.iter().skip(1) {
-                    println!("({}) {} -> {}", h, duplicate, f);
+                    if !matches.is_present("quiet") {
+                        print!("({}) ", h);
+                    }
+                    println!("{} -> {}", duplicate, f);
                 }
             }
         }
