@@ -10,7 +10,7 @@ script:
 - cd target/$TARGET/release
 - tar czvf filesets-$TARGET.tar.gz filesets
 - popd
-- mv target/$TARGET/release/filesets.tar.gz out/
+- mv target/$TARGET/release/filesets-$TARGET.tar.gz out/
 
 addons:
   apt:
