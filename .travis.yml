@@ -4,6 +4,9 @@ script:
 - cargo build --verbose
 - cargo test --verbose
 - cargo build --release --target=$TARGET --verbose
+addons:
+  apt:
+    - musl-tools
 matrix:
   allow_failures:
   - rust: nightly
