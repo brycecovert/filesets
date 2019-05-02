@@ -2,7 +2,6 @@ language: rust
 cache: cargo
 rust:
 - stable
-- beta
 - nightly
 script:
 - cargo build --verbose
@@ -12,6 +11,16 @@ matrix:
   allow_failures:
   - rust: nightly
   fast_finish: true
+  include:
+    - os: linux
+      rust: stable
+      env: TARGET=x86_64-unknown-linux-musl
+    - os: linux
+      rust: nightly
+      env: TARGET=x86_64-unknown-linux-musl
+    - os: osx
+      rust: nightly
+      env: TARGET=x86_64-apple-darwin
 deploy:
   provider: releases
   api_key:
@@ -20,5 +29,5 @@ deploy:
   skip_cleanup: true
   on:
     repo: brycecovert/filesets
-    condition: $TRAVIS_RUST_VERSION = nightly
+    condition: $TRAVIS_RUST_VERSION = stable
     branch: master
