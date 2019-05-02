@@ -7,6 +7,7 @@ use std::fs::{read};
 use std::path::Path;
 use crypto::md5::Md5;
 use crypto::digest::Digest;
+use std::io::{stdout, Write};
 use std::collections::{HashMap, HashSet};
 use std::sync::mpsc::{channel, Sender};
 use threadpool::ThreadPool;
@@ -18,7 +19,7 @@ enum Hashed {
     Err
 }
 
-fn walk(path: &Path, pool: &ThreadPool, tx:  Sender<Hashed>) -> Result<u64, std::io::Error> {
+fn walk(path: &Path, pool: &ThreadPool, tx:  Sender<Hashed>, quiet: bool) -> Result<u64, std::io::Error> {
     let mut cnt = 0;
     for entry in WalkDir::new(&path)
         .follow_links(false)
@@ -26,8 +27,9 @@ fn walk(path: &Path, pool: &ThreadPool, tx:  Sender<Hashed>) -> Result<u64, std:
         .map(|x| x.unwrap()){
             if !entry.metadata().unwrap().is_dir()  {
                 cnt += 1;
-                if cnt % 10000 == 0 {
-                    println!("cnt, {}", cnt);
+                if !quiet && cnt % 100 == 0 {
+                    print!("\rScanning {} ({} found)\0", path.to_str().unwrap(), cnt);
+                    stdout().flush().ok().expect("Could not flush stdout");
                 }
                 let c = tx.clone();
                 pool.execute(move || {
@@ -49,53 +51,42 @@ fn walk(path: &Path, pool: &ThreadPool, tx:  Sender<Hashed>) -> Result<u64, std:
     return Ok(cnt);
 }
 
-fn reduce_hash_map<'a >(rx: &'a mut Iterator<Item = Hashed>, cnt: u64) -> HashMap<String, Vec<String>> {
-    rx.take(cnt as usize).fold(HashMap::new(), |mut a, z| {
-        match z {
-            Hashed::Res(x, y) => {
-                let e = a.entry(x);
-                e.or_insert(vec!()).push(y);
-                a
-            },
-            Hashed::Err => {
-                a
-            }
-        }
-    })
-}
 
 fn build_fileset(directories: &Vec<&str>, quiet: bool) -> HashMap<String, Vec<String>> {
     let pool = ThreadPool::new(12);
 
     let mut seen = HashSet::<String>::new();
-    directories.iter().map(|d| {
-        let (tx, rx) = channel();
-        let cnt = walk(&Path::new(&d), &pool, tx.clone()).unwrap();
-        match quiet {
-            false => { 
-                let mut pb = ProgressBar::new(u64::from(cnt));
-                pb.show_speed =false;
-                pb.format("[=> ]");
-                let h = reduce_hash_map(&mut rx.iter().map(|x| { pb.inc(); x }), cnt);
-                pb.finish();
-                h
-            },
-            true => {
-                reduce_hash_map(&mut rx.iter(), cnt)
-            }
+    let (tx, rx) = channel();
+    directories.iter().flat_map(|d| {
+        let cnt = walk(&Path::new(&d), &pool, tx.clone(), quiet).unwrap();
+        if quiet {
+            rx.iter()
+                .take (cnt as usize)
+                .collect::<Vec<_>>()
+        } else {
+            let mut pb = ProgressBar::new(u64::from(cnt));
+            pb.show_speed =false;
+            pb.format("[=> ]");
+            let z = rx.iter()
+                .take (cnt as usize)
+                .map(|d| { pb.inc(); d})
+                .collect::<Vec<_>>();
+            pb.finish();
+            z
         }
     })
     .fold(HashMap::new(), |mut big, current| {
-        for (k, v) in current {
-            let entry = big.entry(k.to_string()).or_insert(vec!());
-            for file in &v {
-                let canonical = Path::new(file).canonicalize().unwrap().as_os_str().to_str().unwrap().to_owned();
+        match current {
+            Hashed::Res(k, v) => {
+                let entry = big.entry(k.to_string()).or_insert(vec!());
+                let canonical = Path::new(&v).canonicalize().unwrap().as_os_str().to_str().unwrap().to_owned();
 
                 if !seen.contains(&canonical) {
-                    entry.push(file.clone());
+                    entry.push(v.clone());
                 }
                 seen.insert(canonical);
             }
+            _ => ()
         }
         big
     })
