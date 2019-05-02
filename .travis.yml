@@ -5,9 +5,9 @@ rust:
 - beta
 - nightly
 script:
-  - cargo build --verbose
-  - cargo test --verbose
-  - cargo build --release --verbose
+- cargo build --verbose
+- cargo test --verbose
+- cargo build --release --verbose
 matrix:
   allow_failures:
   - rust: nightly
@@ -15,7 +15,7 @@ matrix:
 deploy:
   provider: releases
   api_key:
-    secure: TuGLLDLcsoOtp9vze0/wJ7TwC12GF4+z3Yb3EYV62iFB/+TP1ACMioUyd99w5Nzm6ZcdW4SVdrJdmXpjX792Cq5kJHs8gUrtHg5P8xAE4GighedpSR2fzdpQe5OuRIoMLclSS5KtP03iRBC4fe/XICZ93NJOAjRY+2CT2RA8L8Gob0w4WWN4Yn1OHgrJl1YhZG8WusSYzv1spluwW1CIJw3ywU2vWlglJJ7eGRQt3Ir/w5m15uBzREh/a/whYjzJkKtV1n5cTBGOGljmC9wOf5ApWrbfsPGMlMda+cTZj67qogzwJlBCLrjWIGyCRjaZfUKzPLNub4EGoAXv2zJ+0Nty9qzWbZt6Oe81nDztXinbFN7QmoCb/T8X6sTJXnTlrITJwRIX2fT/R9TFjqvuBeyc2B2Vu8vH8H0NOgoF2TnMM8/8IIo5A/ll47xcczMg1JNRDtT4c2dEP21JXOn+3C8gPowbyxepSdETg7jgEIC42tGYu6K39LPZurWyMoZUNowWq2uY2lUkFnK10Mb6WaT0OFqXU9PR8YD9TK7up2qvQCyWyYX39R7ZV2Gof9ynlf5s9wW+lomigSGKGUuNPLet50ZeQqPMG7nGPOxS2VHv5oOL70Fd9J7m3qyVeliGA7elcPKYVRC6TSolM6wxg9ugIdiOjDNefXoNp6ROhzg=
+    secure: OmUKwR8oqTcgNyTv4G54r/7NyBKMhITlEMbtDT78TtV2vRCVR5w+QgBYXv9Qj7j1ZgwXJDMCzmkwr1A8ETse+XtHZVQrVPH4eCDgjslAgWV2xqj2Un15/vT89D5u8O2uLBKGdAYEzfuuh/VC5PytyR7RNuTFqK/mJehzVn71NlrBr0XvCcDvstL17LQckiDUQtnMVrXIsAE+BmAuK/93Rajr0cqrR9vmMiYm7JQyKCVpWdZzFLNcrvDV1D/Zu1KX2MUBym9Q0UewRvb/IV7E0wNS/2ETN1d+MmG8cDrRCKq1DXTgXpv8jO2hHjhyzdG7ueUYBJy6z0yrK7d8prRq5MFkP6xC3yQ/fiNCjow2WpdxSO5y8YpfcVyxwhwsvBVEz7RL0DB6UmjJu8Co7iiwFD47rgSFIQhp48X3XgB28cNPUwZARsVAd7VKKotUYQHftZjdUEPD4smdK7ywcfA5t1OYzSrKru8bzLrZ8Rg4P1f2jLYJsjyBNCgWpzvaklRARqAnRgDzO0VTVPJ2K7jyaFmQgF9JEUoJ63XB7VOjyfd0MetuhlC+GkzEWqGGSvfhsHcvgMkpaoDDzQF8wu5I83yOhLVeybmYq+uyXWsUObhVLo8iTKYKJxFavUmFmUivsgjSmSIsX3SrfbcI+zR0hpU8yQEOXa4YWInGDUDikIA=
   file: target/release/filesets
   on:
     repo: brycecovert/filesets
