@@ -20,3 +20,5 @@ deploy:
   skip_cleanup: true
   on:
     repo: brycecovert/filesets
+    condition: $TRAVIS_RUST_VERSION = nightly
+    branch: master
