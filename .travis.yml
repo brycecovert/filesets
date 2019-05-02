@@ -6,7 +6,8 @@ script:
 - cargo build --release --target=$TARGET --verbose
 addons:
   apt:
-    - musl-tools
+    packages:
+      - musl-tools
 matrix:
   allow_failures:
   - rust: nightly
