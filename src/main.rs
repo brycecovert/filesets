@@ -4,7 +4,7 @@ extern crate threadpool;
 extern crate pbr;
 use clap::{Arg, App, ArgGroup};
 use std::fs::{read};
-use std::path::Path;
+use std::path::{Path, Components, Component};
 use crypto::md5::Md5;
 use crypto::digest::Digest;
 use std::io::{stdout, Write};
@@ -27,8 +27,10 @@ fn walk(path: &Path, pool: &ThreadPool, tx:  Sender<Hashed>, quiet: bool) -> Res
         .map(|x| x.unwrap()){
             if !entry.metadata().unwrap().is_dir()  {
                 cnt += 1;
-                if !quiet && cnt % 100 == 0 {
-                    print!("\rScanning {} ({} found)\0", path.to_str().unwrap(), cnt);
+                if !quiet && cnt % 3000 == 0 {
+                    if let Component::Normal(last_path_part)  = entry.path().components().last().unwrap() {
+                        print!("\rScanning {} ({} found)                                             \r",   last_path_part.to_str().unwrap().to_string(), cnt);
+                    }
                     stdout().flush().ok().expect("Could not flush stdout");
                 }
                 let c = tx.clone();
