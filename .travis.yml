@@ -7,6 +7,8 @@ script:
 addons:
   apt:
     packages:
+      - musl
+      - musl-dev
       - musl-tools
 matrix:
   allow_failures:
@@ -15,10 +17,10 @@ matrix:
   include:
     - os: linux
       rust: stable
-      env: TARGET=x86_64-unknown-linux-musl
+      env: TARGET=x86_64-unknown-linux-gnu
     - os: linux
       rust: stable
-      env: TARGET=x86_64-unknown-linux-musl
+      env: TARGET=x86_64-unknown-linux-gnu
     - os: osx
       rust: stable
       env: TARGET=x86_64-apple-darwin
