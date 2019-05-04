@@ -1,3 +1,5 @@
+![Build Status](https://travis-ci.com/brycecovert/filesets.svg?branch=master)
+
 # Filesets
 
 Your swiss-army knife for dealing with identical files. 
