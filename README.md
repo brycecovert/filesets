@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/brycecovert/filesets.svg?branch=master)](https://travis-ci.org/brycecovert/filesets)
+[![Build Status](https://travis-ci.com/brycecovert/filesets.svg?branch=master)](https://travis-ci.com/brycecovert/filesets)
 [![Crates.io](https://img.shields.io/crates/v/filesets.svg)](https://crates.io/crates/filesets)
 
 # Filesets
