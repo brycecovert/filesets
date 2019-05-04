@@ -11,7 +11,7 @@ Filesets makes it easy to clean up files with identical contents. Common use cas
 
 ### Direct
 
-[https://github.com/brycecovert/filesets/releases/download/v0.1.0/filesets-x86_64-apple-darwin.tar.gz](macOS) | [https://github.com/brycecovert/filesets/releases/download/v0.1.0/filesets-x86_64-unknown-linux-musl.tar.gz](linux)
+[macOS](https://github.com/brycecovert/filesets/releases/download/v0.1.0/filesets-x86_64-apple-darwin.tar.gz) | [linux](https://github.com/brycecovert/filesets/releases/download/v0.1.0/filesets-x86_64-unknown-linux-musl.tar.gz)
 
 
 ### Homebrew
