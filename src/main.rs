@@ -57,7 +57,7 @@ fn walk(path: &Path, pool: &ThreadPool, tx:  Sender<Hashed>, quiet: bool) -> Res
 fn build_fileset(directories: &Vec<&str>, quiet: bool) -> HashMap<String, Vec<String>> {
     let pool = ThreadPool::new(12);
 
-    let mut seen = HashSet::<String>::new();
+    let mut seen = HashSet::<String>::with_capacity(10000);
     let (tx, rx) = channel();
     directories.iter().flat_map(|d| {
         let cnt = walk(&Path::new(&d), &pool, tx.clone(), quiet).unwrap();
@@ -77,14 +77,14 @@ fn build_fileset(directories: &Vec<&str>, quiet: bool) -> HashMap<String, Vec<St
             z
         }
     })
-    .fold(HashMap::new(), |mut big, current| {
+    .fold(HashMap::with_capacity(100000), |mut big, current| {
         match current {
             Hashed::Res(k, v) => {
-                let entry = big.entry(k.to_string()).or_insert(vec!());
+                let entry = big.entry(k).or_insert(vec!());
                 let canonical = Path::new(&v).canonicalize().unwrap().as_os_str().to_str().unwrap().to_owned();
 
                 if !seen.contains(&canonical) {
-                    entry.push(v.clone());
+                    entry.push(v);
                 }
                 seen.insert(canonical);
             }
@@ -186,6 +186,7 @@ fn main() {
                     println!("{} -> {}", duplicate, f);
                 }
             }
+            stdout().flush().ok().expect("Could not flush stdout");
         }
     }
 }
