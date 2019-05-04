@@ -1,6 +1,9 @@
 [package]
 name = "filesets"
+description = "Your swiss-army knife for dealing with identical files."
 version = "0.1.0"
+license = "MIT"
+categories = ["command-line-utilities", "file-processing"]
 authors = ["Bryce Covert <filesets@brycecovertoperations.com>"]
 edition = "2018"
 
