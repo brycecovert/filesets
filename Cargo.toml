@@ -3,9 +3,11 @@ name = "filesets"
 description = "Your swiss-army knife for dealing with identical files."
 version = "0.1.0"
 license = "MIT"
-categories = ["command-line-utilities", "file-processing"]
+categories = ["command-line-utilities", "filesystem"]
 authors = ["Bryce Covert <filesets@brycecovertoperations.com>"]
 edition = "2018"
+homepage = "https://github.com/brycecovert/filesets"
+repository = "https://github.com/brycecovert/filesets"
 
 [dependencies]
 clap = "2.33.0"
