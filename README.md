@@ -7,6 +7,17 @@ Filesets makes it easy to clean up files with identical contents. Common use cas
 * I have five full backups. Remove duplicated files.
 * Don't remove the duplicated files, create symlinks to the older snapshots (similar to Time Machine)
 
+## Installation
+
+### Direct
+
+[https://github.com/brycecovert/filesets/releases/download/v0.1.0/filesets-x86_64-apple-darwin.tar.gz](macOS) | [https://github.com/brycecovert/filesets/releases/download/v0.1.0/filesets-x86_64-unknown-linux-musl.tar.gz](linux)
+
+
+### Homebrew
+
+_Coming soon_
+
 ## Terminology
 
 Filesets categorizes files from multiple directories into the following categories:
@@ -66,5 +77,7 @@ Seeing a plan to symlink files in priority order :
 ```
 $ filesets -p /Volumes/Backup/1/Documents /Volumes/Backup/2/Documents
 ```
+
+
 
 
