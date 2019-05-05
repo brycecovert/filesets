@@ -7,8 +7,8 @@ Your swiss-army knife for dealing with identical files.
 
 Filesets makes it easy to clean up files with identical contents. Common use cases include: 
 * Which documents are shared from my laptop backup and desktop backup?
-* I have five full backups. Remove duplicated files.
-* Don't remove the duplicated files, create symlinks to the older snapshots (similar to Time Machine)
+* I have five full backups. Keep the first instance of every file, and remove all other replicas.
+* Actually, don't remove the replicated files, create symlinks to the first instance (similar to Time Machine)
 
 ## Installation
 
